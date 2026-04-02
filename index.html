@@ -623,7 +623,7 @@
 <!-- INFO BAR -->
 <div class="info-bar">
   <div class="info-bar-inner">
-    <div class="info-tag">👤 <span>男性，47歲（1979/10/03）</span></div>
+    <div class="info-tag">👤 <span>女性，47歲（1979/10/03）</span></div>
     <div class="info-tag">🔬 <span id="latest-date">最新數據：2026/03</span></div>
     <span class="badge-fh">遺傳性高膽固醇 (FH)</span>
     <span class="badge-med" id="med-badge">💊 服藥中（約自 2025/06）</span>
@@ -776,11 +776,11 @@ const METRICS = {
     unit: 'mg/dL',
     icon: '💚',
     color: '#10b981',
-    refMin: 40,
-    refMax: null,
+    refMin: 50,
+    refMax: null, // 女性 HDL 目標 > 50 mg/dL
     higherIsBad: false,
     data: [
-      { date: '2011-04', value: 75 },
+      { date: '2011-04', value: 75 }, // 女性正常值 > 50 mg/dL
       { date: '2012-06', value: 90 },
       { date: '2016-03', value: 76 },
       { date: '2017-06', value: 78 },
@@ -1243,7 +1243,7 @@ function exportPDF() {
   pdfDiv.innerHTML = `
     <div style="border-bottom:3px solid #1a1a2e;padding-bottom:16px;margin-bottom:20px">
       <h1 style="font-size:22px;margin:0;color:#1a1a2e">個人健康數據報告</h1>
-      <p style="margin:4px 0 0;color:#666;font-size:13px">男性，47歲（1979/10/03）· 遺傳性高膽固醇（FH）患者</p>
+      <p style="margin:4px 0 0;color:#666;font-size:13px">女性，47歲（1979/10/03）· 遺傳性高膽固醇（FH）患者</p>
       <p style="margin:4px 0 0;color:#666;font-size:12px">報告產生時間：${new Date().toLocaleDateString('zh-TW')}</p>
     </div>
     <h2 style="font-size:16px;margin:0 0 12px;color:#1a1a2e">${m.fullName} 歷史趨勢</h2>
