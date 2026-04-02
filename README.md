@@ -1,2 +1,1298 @@
 # health-dashboard
 個人健康數據追蹤儀表板
+[index.html](https://github.com/user-attachments/files/26441392/index.html)
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>個人健康數據儀表板</title>
+  <meta name="description" content="長期健康數據追蹤與趨勢分析，支援遺傳性高膽固醇監控">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
+  <style>
+    :root {
+      --bg-primary: #0a0e1a;
+      --bg-secondary: #111827;
+      --bg-card: rgba(255,255,255,0.04);
+      --bg-card-hover: rgba(255,255,255,0.07);
+      --accent-teal: #00d4aa;
+      --accent-blue: #3b82f6;
+      --accent-purple: #8b5cf6;
+      --accent-amber: #f59e0b;
+      --accent-rose: #f43f5e;
+      --accent-green: #10b981;
+      --text-primary: #f1f5f9;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --border: rgba(255,255,255,0.08);
+      --border-accent: rgba(0,212,170,0.3);
+      --shadow: 0 4px 24px rgba(0,0,0,0.4);
+      --radius: 16px;
+      --radius-sm: 10px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* 背景動態漸層 */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 50% at 20% 10%, rgba(0,212,170,0.06) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 40% at 80% 80%, rgba(59,130,246,0.05) 0%, transparent 60%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 20px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ===== HEADER ===== */
+    header {
+      background: rgba(10,14,26,0.9);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      max-width: 1200px;
+      margin: 0 auto;
+      gap: 12px;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, var(--accent-teal), var(--accent-blue));
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+
+    .header-title h1 {
+      font-size: 17px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .header-title p {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      font-weight: 500;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent-teal), #00b38a);
+      color: #0a0e1a;
+    }
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 16px rgba(0,212,170,0.4);
+    }
+
+    .btn-outline {
+      background: transparent;
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+    }
+    .btn-outline:hover {
+      background: var(--bg-card-hover);
+      color: var(--text-primary);
+    }
+
+    .btn-ai {
+      background: linear-gradient(135deg, var(--accent-purple), #7c3aed);
+      color: white;
+    }
+    .btn-ai:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 16px rgba(139,92,246,0.4);
+    }
+
+    /* ===== PATIENT INFO BAR ===== */
+    .info-bar {
+      background: rgba(0,212,170,0.05);
+      border-bottom: 1px solid var(--border-accent);
+      padding: 10px 20px;
+    }
+
+    .info-bar-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .info-tag {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .info-tag span {
+      color: var(--accent-teal);
+      font-weight: 500;
+    }
+
+    .badge-fh {
+      background: rgba(244,63,94,0.15);
+      color: var(--accent-rose);
+      border: 1px solid rgba(244,63,94,0.3);
+      padding: 2px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .badge-med {
+      background: rgba(251,191,36,0.12);
+      color: var(--accent-amber);
+      border: 1px solid rgba(251,191,36,0.3);
+      padding: 2px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 500;
+    }
+
+    /* ===== MAIN CONTENT ===== */
+    main {
+      padding: 24px 0 60px;
+    }
+
+    /* ===== SUMMARY CARDS ===== */
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .metric-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      cursor: pointer;
+      transition: all 0.25s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .metric-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      border-radius: 3px 3px 0 0;
+      opacity: 0;
+      transition: opacity 0.25s;
+    }
+
+    .metric-card:hover {
+      background: var(--bg-card-hover);
+      transform: translateY(-2px);
+      box-shadow: var(--shadow);
+    }
+
+    .metric-card.active {
+      border-color: var(--card-color, var(--accent-teal));
+      box-shadow: 0 0 0 1px var(--card-color, var(--accent-teal)),
+                  0 4px 20px rgba(0,212,170,0.1);
+    }
+
+    .metric-card.active::before {
+      opacity: 1;
+      background: var(--card-color, var(--accent-teal));
+    }
+
+    .metric-card-icon {
+      font-size: 20px;
+      margin-bottom: 8px;
+    }
+
+    .metric-card-name {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .metric-card-value {
+      font-size: 22px;
+      font-weight: 700;
+      line-height: 1;
+      margin-bottom: 6px;
+    }
+
+    .metric-card-unit {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-weight: 400;
+    }
+
+    .metric-card-trend {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .trend-up { color: var(--accent-rose); }
+    .trend-down { color: var(--accent-green); }
+    .trend-neutral { color: var(--text-muted); }
+
+    /* ===== CHART AREA ===== */
+    .chart-section {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+
+    .chart-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .chart-title {
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .chart-subtitle {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .chart-controls {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .time-btn {
+      padding: 5px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 500;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .time-btn:hover,
+    .time-btn.active {
+      background: var(--accent-teal);
+      color: #0a0e1a;
+      border-color: var(--accent-teal);
+    }
+
+    .chart-wrapper {
+      position: relative;
+      height: 320px;
+    }
+
+    @media (max-width: 480px) {
+      .chart-wrapper { height: 240px; }
+    }
+
+    /* ===== REFERENCE RANGE NOTE ===== */
+    .ref-note {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid var(--border);
+    }
+
+    .ref-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .ref-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+
+    /* ===== DATA TABLE ===== */
+    .table-section {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      margin-bottom: 20px;
+    }
+
+    .table-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .table-title {
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .table-wrapper {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    th {
+      padding: 10px 14px;
+      text-align: left;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      background: rgba(255,255,255,0.02);
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 10px 14px;
+      border-bottom: 1px solid rgba(255,255,255,0.03);
+      color: var(--text-secondary);
+      white-space: nowrap;
+    }
+
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(255,255,255,0.02); }
+
+    .val-normal { color: var(--accent-green); font-weight: 500; }
+    .val-high { color: var(--accent-rose); font-weight: 500; }
+    .val-border { color: var(--accent-amber); font-weight: 500; }
+
+    .event-tag {
+      background: rgba(251,191,36,0.15);
+      color: var(--accent-amber);
+      font-size: 10px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 10px;
+    }
+
+    /* ===== PDF EXPORT AREA ===== */
+    #pdf-content {
+      display: none;
+    }
+
+    /* ===== MODAL ===== */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      backdrop-filter: blur(8px);
+      z-index: 200;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s;
+    }
+
+    .modal-overlay.open {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .modal-box {
+      background: #1a2235;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      max-width: 480px;
+      width: 100%;
+      transform: translateY(20px);
+      transition: transform 0.3s;
+    }
+
+    .modal-overlay.open .modal-box {
+      transform: translateY(0);
+    }
+
+    .modal-title {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .modal-desc {
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+      margin-bottom: 20px;
+    }
+
+    .modal-links {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .modal-link-btn {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 16px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+      color: var(--text-primary);
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.2s;
+      cursor: pointer;
+    }
+
+    .modal-link-btn:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--accent-purple);
+    }
+
+    .modal-link-icon {
+      font-size: 24px;
+      flex-shrink: 0;
+    }
+
+    .modal-link-text small {
+      display: block;
+      font-size: 11px;
+      color: var(--text-muted);
+      font-weight: 400;
+      margin-top: 1px;
+    }
+
+    .modal-close {
+      width: 100%;
+      padding: 10px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text-secondary);
+      cursor: pointer;
+      font-size: 13px;
+      transition: all 0.2s;
+    }
+
+    .modal-close:hover {
+      background: var(--bg-card);
+      color: var(--text-primary);
+    }
+
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 600px) {
+      .header-inner { padding: 12px 16px; }
+      .header-title h1 { font-size: 15px; }
+      .btn { padding: 7px 12px; font-size: 12px; }
+      .btn .btn-text { display: none; }
+      .cards-grid { grid-template-columns: repeat(2, 1fr); }
+      .chart-section { padding: 16px; }
+      .info-bar { display: none; }
+    }
+
+    /* ===== ANIMATIONS ===== */
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .fade-in {
+      animation: fadeInUp 0.4s ease forwards;
+    }
+
+    .fade-in:nth-child(2) { animation-delay: 0.05s; }
+    .fade-in:nth-child(3) { animation-delay: 0.10s; }
+    .fade-in:nth-child(4) { animation-delay: 0.15s; }
+    .fade-in:nth-child(5) { animation-delay: 0.20s; }
+    .fade-in:nth-child(6) { animation-delay: 0.25s; }
+    .fade-in:nth-child(7) { animation-delay: 0.30s; }
+  </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="header-inner">
+    <div class="header-left">
+      <div class="logo">🏥</div>
+      <div class="header-title">
+        <h1>個人健康數據儀表板</h1>
+        <p>長期趨勢追蹤 · 2011–2026</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-ai" onclick="openAIModal()" id="btn-ai">
+        🤖 <span class="btn-text">AI 分析</span>
+      </button>
+      <button class="btn btn-primary" onclick="exportPDF()" id="btn-pdf">
+        📄 <span class="btn-text">匯出 PDF</span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<!-- INFO BAR -->
+<div class="info-bar">
+  <div class="info-bar-inner">
+    <div class="info-tag">👤 <span>女性，47歲（1979/10/03）</span></div>
+    <div class="info-tag">🔬 <span id="latest-date">最新數據：2026/03</span></div>
+    <span class="badge-fh">遺傳性高膽固醇 (FH)</span>
+    <span class="badge-med" id="med-badge">💊 服藥中（約自 2025/06）</span>
+  </div>
+</div>
+
+<!-- MAIN -->
+<main>
+  <div class="container">
+
+    <!-- METRIC CARDS -->
+    <div class="cards-grid" id="cards-grid">
+      <!-- 動態產生 -->
+    </div>
+
+    <!-- CHART -->
+    <div class="chart-section fade-in">
+      <div class="chart-header">
+        <div>
+          <div class="chart-title" id="chart-title">LDL 低密度脂蛋白趨勢</div>
+          <div class="chart-subtitle" id="chart-subtitle">2016–2026，含服藥前後對比</div>
+        </div>
+        <div class="chart-controls">
+          <button class="time-btn" onclick="setTimeRange('all')" id="range-all">全部</button>
+          <button class="time-btn active" onclick="setTimeRange('5y')" id="range-5y">近5年</button>
+          <button class="time-btn" onclick="setTimeRange('2y')" id="range-2y">近2年</button>
+        </div>
+      </div>
+      <div class="chart-wrapper">
+        <canvas id="mainChart"></canvas>
+      </div>
+      <div class="ref-note" id="ref-note">
+        <!-- 動態產生 -->
+      </div>
+    </div>
+
+    <!-- DATA TABLE -->
+    <div class="table-section fade-in">
+      <div class="table-header">
+        <div class="table-title">📋 歷史數據明細</div>
+        <div style="font-size:11px;color:var(--text-muted)">點選上方指標卡片切換顯示</div>
+      </div>
+      <div class="table-wrapper">
+        <table id="data-table">
+          <thead>
+            <tr>
+              <th>日期</th>
+              <th>年齡</th>
+              <th id="th-metric">LDL (mg/dL)</th>
+              <th>狀態</th>
+              <th>備註</th>
+            </tr>
+          </thead>
+          <tbody id="table-body">
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<!-- AI MODAL -->
+<div class="modal-overlay" id="ai-modal">
+  <div class="modal-box">
+    <div class="modal-title">🤖 AI 健康分析</div>
+    <div class="modal-desc">
+      選擇 AI 工具進行深度分析。建議先用 <strong>NotebookLM</strong> 做文獻比對與深度問答，再用 <strong>AI Studio</strong> 查詢最新研究動態。
+    </div>
+    <div class="modal-links">
+      <a class="modal-link-btn" href="https://notebooklm.google.com" target="_blank" rel="noopener">
+        <div class="modal-link-icon">📚</div>
+        <div class="modal-link-text">
+          NotebookLM（推薦首選）
+          <small>深度問答 · 文獻引用 · 連結 Google Sheets 分析數據</small>
+        </div>
+      </a>
+      <a class="modal-link-btn" href="https://aistudio.google.com" target="_blank" rel="noopener">
+        <div class="modal-link-icon">🔍</div>
+        <div class="modal-link-text">
+          Google AI Studio
+          <small>即時搜尋最新研究 · 快速問答 · 無需設定</small>
+        </div>
+      </a>
+    </div>
+    <div style="background:rgba(0,212,170,0.06);border:1px solid var(--border-accent);border-radius:10px;padding:12px;margin-bottom:16px;font-size:12px;color:var(--text-secondary);line-height:1.6;">
+      💡 <strong style="color:var(--accent-teal)">分析提示</strong>：可在 AI 中附上這段文字：<br>
+      「我是遺傳性高膽固醇（FH）患者，47歲男性。以下是我的歷史血脂數據，請幫我分析趨勢，並參考最新 FH 相關醫學研究給我建議。」
+    </div>
+    <button class="modal-close" onclick="closeAIModal()">關閉</button>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// 資料定義
+// ============================================================
+const BIRTH_YEAR = 1979;
+
+const METRICS = {
+  ldl: {
+    name: 'LDL',
+    fullName: 'LDL 低密度脂蛋白',
+    unit: 'mg/dL',
+    icon: '🧪',
+    color: '#f43f5e',
+    refMin: null,
+    refMax: 100, // FH患者目標 <100 mg/dL
+    refTarget: 70, // 高風險目標
+    higherIsBad: true,
+    data: [
+      { date: '2016-03', value: 173 },
+      { date: '2017-06', value: 155 },
+      { date: '2019-12', value: 173 },
+      { date: '2022-06', value: 183 },
+      { date: '2023-12', value: 187 },
+      { date: '2024-06', value: 166 },
+      { date: '2025-05', value: 200 },
+      { date: '2025-09', value: 122, note: '服藥3個月' },
+      { date: '2025-12', value: 107 },
+      { date: '2026-03', value: 138 }
+    ]
+  },
+  tc: {
+    name: '總膽固醇',
+    fullName: '總膽固醇 (TC)',
+    unit: 'mg/dL',
+    icon: '🫀',
+    color: '#f97316',
+    refMax: 200,
+    higherIsBad: true,
+    data: [
+      { date: '2011-04', value: 222 },
+      { date: '2012-06', value: 271 },
+      { date: '2016-03', value: 261 },
+      { date: '2017-06', value: 250 },
+      { date: '2019-12', value: 242 },
+      { date: '2022-06', value: 277 },
+      { date: '2023-12', value: 287 },
+      { date: '2024-06', value: 247 },
+      { date: '2025-05', value: 297 },
+      { date: '2025-09', value: 205, note: '服藥3個月' },
+      { date: '2025-12', value: 194 },
+      { date: '2026-03', value: 238 }
+    ]
+  },
+  hdl: {
+    name: 'HDL',
+    fullName: 'HDL 高密度脂蛋白',
+    unit: 'mg/dL',
+    icon: '💚',
+    color: '#10b981',
+    refMin: 50,
+    refMax: null, // 女性 HDL 目標 > 50 mg/dL
+    higherIsBad: false,
+    data: [
+      { date: '2011-04', value: 75 }, // 女性正常值 > 50 mg/dL
+      { date: '2012-06', value: 90 },
+      { date: '2016-03', value: 76 },
+      { date: '2017-06', value: 78 },
+      { date: '2019-12', value: 67 },
+      { date: '2022-06', value: 76 },
+      { date: '2023-12', value: 88 },
+      { date: '2024-06', value: 66 },
+      { date: '2025-05', value: 81 },
+      { date: '2025-09', value: 71 },
+      { date: '2025-12', value: 73 },
+      { date: '2026-03', value: 87 }
+    ]
+  },
+  tg: {
+    name: 'TG',
+    fullName: '三酸甘油酯 (TG)',
+    unit: 'mg/dL',
+    icon: '🫙',
+    color: '#eab308',
+    refMax: 150,
+    higherIsBad: true,
+    data: [
+      { date: '2011-04', value: 56 },
+      { date: '2012-06', value: 50 },
+      { date: '2016-03', value: 59 },
+      { date: '2017-06', value: 84 },
+      { date: '2019-12', value: 77 },
+      { date: '2022-06', value: 88 },
+      { date: '2023-12', value: 87 },
+      { date: '2024-06', value: 96 },
+      { date: '2025-05', value: 78 },
+      { date: '2025-09', value: 59 },
+      { date: '2025-12', value: 68 },
+      { date: '2026-03', value: 68 }
+    ]
+  },
+  ai: {
+    name: '動脈硬化指數',
+    fullName: '動脈硬化指數 (TC/HDL)',
+    unit: '比值',
+    icon: '🩺',
+    color: '#8b5cf6',
+    refMax: 3.5,
+    higherIsBad: true,
+    data: [
+      { date: '2011-04', value: 2.96 },
+      { date: '2012-06', value: 3.01 },
+      { date: '2016-03', value: 3.5 },
+      { date: '2017-06', value: 3.2 },
+      { date: '2019-12', value: 3.6 },
+      { date: '2022-06', value: 3.6 },
+      { date: '2023-12', value: 3.26 },
+      { date: '2024-06', value: 3.74 },
+      { date: '2025-05', value: 3.67 },
+      { date: '2025-09', value: 2.88, note: '服藥3個月' },
+      { date: '2025-12', value: 2.66 },
+      { date: '2026-03', value: 2.70 }
+    ]
+  },
+  glucose: {
+    name: '空腹血糖',
+    fullName: '空腹血糖',
+    unit: 'mg/dL',
+    icon: '🩸',
+    color: '#3b82f6',
+    refMax: 100,
+    higherIsBad: true,
+    data: [
+      { date: '2011-04', value: 86 },
+      { date: '2016-03', value: 95 },
+      { date: '2017-06', value: 97 },
+      { date: '2019-12', value: 104 },
+      { date: '2022-06', value: 99 },
+      { date: '2023-12', value: 99 },
+      { date: '2025-05', value: 101 },
+      { date: '2025-09', value: 98 },
+      { date: '2025-12', value: 94 }
+    ]
+  },
+  tghdl: {
+    name: 'TG/HDL',
+    fullName: 'TG/HDL 胰島素阻抗指標',
+    unit: '比值',
+    icon: '📊',
+    color: '#00d4aa',
+    refMax: 2.0,
+    refTarget: 1.0,
+    higherIsBad: true,
+    data: [
+      { date: '2011-04', value: 0.74 },
+      { date: '2012-06', value: 0.55 },
+      { date: '2016-03', value: 0.77 },
+      { date: '2017-06', value: 1.07 },
+      { date: '2019-12', value: 1.15 },
+      { date: '2022-06', value: 1.15 },
+      { date: '2023-12', value: 0.98 },
+      { date: '2024-06', value: 1.45 },
+      { date: '2025-05', value: 0.96 },
+      { date: '2025-09', value: 0.83 },
+      { date: '2025-12', value: 0.93 },
+      { date: '2026-03', value: 0.78 }
+    ]
+  }
+};
+
+const MEDICATION_DATE = '2025-06';
+
+// ============================================================
+// 狀態
+// ============================================================
+let currentMetric = 'ldl';
+let currentRange = '5y';
+let mainChart = null;
+
+// ============================================================
+// 工具函數
+// ============================================================
+function parseDate(str) {
+  // 支援 YYYY-MM 格式
+  const parts = str.split('-');
+  return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, 1);
+}
+
+function formatDateLabel(str) {
+  const parts = str.split('-');
+  return `${parts[0]}/${parts[1]}`;
+}
+
+function calcAge(dateStr) {
+  const d = parseDate(dateStr);
+  return d.getFullYear() - BIRTH_YEAR;
+}
+
+function getFilteredData(metricKey, range) {
+  const data = METRICS[metricKey].data;
+  if (range === 'all') return data;
+  const now = new Date();
+  const cutoff = new Date();
+  if (range === '5y') cutoff.setFullYear(now.getFullYear() - 5);
+  if (range === '2y') cutoff.setFullYear(now.getFullYear() - 2);
+  return data.filter(d => parseDate(d.date) >= cutoff);
+}
+
+function getStatus(metricKey, value) {
+  const m = METRICS[metricKey];
+  if (m.higherIsBad) {
+    if (m.refMax && value > m.refMax) return 'high';
+    if (m.refMax && value > m.refMax * 0.9) return 'border';
+    return 'normal';
+  } else {
+    if (m.refMin && value < m.refMin) return 'high';
+    return 'normal';
+  }
+}
+
+function getStatusLabel(status) {
+  if (status === 'high') return '<span class="val-high">⚠ 偏高</span>';
+  if (status === 'border') return '<span class="val-border">⚡ 邊緣</span>';
+  return '<span class="val-normal">✓ 正常</span>';
+}
+
+function getTrend(data) {
+  if (data.length < 2) return null;
+  const last = data[data.length - 1].value;
+  const prev = data[data.length - 2].value;
+  const diff = last - prev;
+  const pct = Math.abs(((diff / prev) * 100)).toFixed(1);
+  return { diff, pct, last, prev };
+}
+
+// ============================================================
+// 建立指標卡片
+// ============================================================
+function buildCards() {
+  const grid = document.getElementById('cards-grid');
+  grid.innerHTML = '';
+  Object.keys(METRICS).forEach((key, i) => {
+    const m = METRICS[key];
+    const data = m.data;
+    const latest = data[data.length - 1];
+    const trend = getTrend(data);
+    const status = getStatus(key, latest.value);
+
+    let trendHTML = '';
+    if (trend) {
+      const icon = trend.diff < 0 ? '↓' : '↑';
+      let cls = 'trend-neutral';
+      if (m.higherIsBad) cls = trend.diff < 0 ? 'trend-down' : 'trend-up';
+      else cls = trend.diff > 0 ? 'trend-down' : 'trend-up';
+      trendHTML = `<div class="metric-card-trend ${cls}">${icon} ${trend.pct}%</div>`;
+    }
+
+    const card = document.createElement('div');
+    card.className = `metric-card fade-in${key === currentMetric ? ' active' : ''}`;
+    card.style.setProperty('--card-color', m.color);
+    card.dataset.metric = key;
+    card.innerHTML = `
+      <div class="metric-card-icon">${m.icon}</div>
+      <div class="metric-card-name">${m.name}</div>
+      <div class="metric-card-value" style="color:${m.color}">${latest.value}<span class="metric-card-unit"> ${m.unit}</span></div>
+      ${trendHTML}
+    `;
+    card.addEventListener('click', () => selectMetric(key));
+    grid.appendChild(card);
+  });
+}
+
+// ============================================================
+// 切換指標
+// ============================================================
+function selectMetric(key) {
+  currentMetric = key;
+  document.querySelectorAll('.metric-card').forEach(c => {
+    c.classList.toggle('active', c.dataset.metric === key);
+  });
+  updateChart();
+  updateTable();
+}
+
+// ============================================================
+// 時間範圍
+// ============================================================
+function setTimeRange(range) {
+  currentRange = range;
+  document.querySelectorAll('.time-btn').forEach(b => {
+    b.classList.toggle('active', b.id === `range-${range}`);
+  });
+  updateChart();
+}
+
+// ============================================================
+// 建立/更新圖表
+// ============================================================
+function updateChart() {
+  const m = METRICS[currentMetric];
+  const filtered = getFilteredData(currentMetric, currentRange);
+
+  document.getElementById('chart-title').textContent = `${m.fullName} 趨勢`;
+  document.getElementById('chart-subtitle').textContent =
+    `${filtered[0]?.date || ''}–${filtered[filtered.length-1]?.date || ''}，含服藥前後對比`;
+
+  const labels = filtered.map(d => formatDateLabel(d.date));
+  const values = filtered.map(d => d.value);
+  const medIdx = filtered.findIndex(d => d.date >= MEDICATION_DATE);
+
+  // 分段顏色（服藥前後）
+  const pointColors = filtered.map(d => d.date >= MEDICATION_DATE ? '#00d4aa' : m.color);
+
+  if (mainChart) mainChart.destroy();
+
+  const ctx = document.getElementById('mainChart').getContext('2d');
+
+  // 漸層填充
+  const gradient = ctx.createLinearGradient(0, 0, 0, 300);
+  gradient.addColorStop(0, m.color + '30');
+  gradient.addColorStop(1, m.color + '00');
+
+  // 標記服藥時間點的 plugin
+  const medLinePlugin = {
+    id: 'medLine',
+    afterDraw(chart) {
+      if (medIdx < 0) return;
+      const { ctx: c, chartArea: { top, bottom }, scales: { x } } = chart;
+      // 找到服藥第一個資料點的 x 位置
+      const xPos = x.getPixelForValue(medIdx);
+      c.save();
+      c.strokeStyle = 'rgba(0,212,170,0.5)';
+      c.lineWidth = 1.5;
+      c.setLineDash([4, 4]);
+      c.beginPath();
+      c.moveTo(xPos, top);
+      c.lineTo(xPos, bottom);
+      c.stroke();
+      c.fillStyle = 'rgba(0,212,170,0.9)';
+      c.font = '10px Inter, sans-serif';
+      c.fillText('💊 開始服藥', xPos + 4, top + 14);
+      c.restore();
+    }
+  };
+
+  // 參考線 plugin
+  const refLinePlugin = {
+    id: 'refLine',
+    afterDraw(chart) {
+      const { ctx: c, chartArea: { left, right }, scales: { y } } = chart;
+      const drawRefLine = (val, label, color) => {
+        const yPos = y.getPixelForValue(val);
+        if (yPos < chart.chartArea.top || yPos > chart.chartArea.bottom) return;
+        c.save();
+        c.strokeStyle = color;
+        c.lineWidth = 1;
+        c.setLineDash([6, 4]);
+        c.beginPath();
+        c.moveTo(left, yPos);
+        c.lineTo(right, yPos);
+        c.stroke();
+        c.fillStyle = color;
+        c.font = '10px Inter, sans-serif';
+        c.fillText(label, right - 60, yPos - 4);
+        c.restore();
+      };
+      if (m.refMax) drawRefLine(m.refMax, `目標 ≤ ${m.refMax}`, 'rgba(251,191,36,0.7)');
+      if (m.refTarget) drawRefLine(m.refTarget, `最佳 ≤ ${m.refTarget}`, 'rgba(16,185,129,0.7)');
+      if (m.refMin) drawRefLine(m.refMin, `下限 ${m.refMin}`, 'rgba(251,191,36,0.7)');
+    }
+  };
+
+  mainChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: m.name,
+        data: values,
+        borderColor: m.color,
+        backgroundColor: gradient,
+        pointBackgroundColor: pointColors,
+        pointBorderColor: '#0a0e1a',
+        pointBorderWidth: 2,
+        pointRadius: 5,
+        pointHoverRadius: 7,
+        borderWidth: 2.5,
+        fill: true,
+        tension: 0.35
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#1a2235',
+          borderColor: 'rgba(255,255,255,0.1)',
+          borderWidth: 1,
+          titleColor: '#f1f5f9',
+          bodyColor: '#94a3b8',
+          padding: 12,
+          callbacks: {
+            label(ctx) {
+              const d = filtered[ctx.dataIndex];
+              let text = `${m.name}: ${ctx.raw} ${m.unit}`;
+              if (d.note) text += `  ✦ ${d.note}`;
+              return text;
+            },
+            afterLabel(ctx) {
+              const d = filtered[ctx.dataIndex];
+              const status = getStatus(currentMetric, d.value);
+              if (status === 'high') return '⚠ 偏高';
+              if (status === 'border') return '⚡ 邊緣值';
+              return '✓ 在目標內';
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { color: 'rgba(255,255,255,0.04)' },
+          ticks: { color: '#64748b', font: { size: 11, family: 'Inter' } }
+        },
+        y: {
+          grid: { color: 'rgba(255,255,255,0.06)' },
+          ticks: { color: '#64748b', font: { size: 11, family: 'Inter' } }
+        }
+      }
+    },
+    plugins: [medLinePlugin, refLinePlugin]
+  });
+
+  // 更新圖例
+  buildRefNote();
+}
+
+function buildRefNote() {
+  const m = METRICS[currentMetric];
+  const note = document.getElementById('ref-note');
+  let html = '';
+  if (m.refMax) html += `<div class="ref-item"><div class="ref-dot" style="background:rgba(251,191,36,0.7)"></div>目標上限：${m.refMax} ${m.unit}</div>`;
+  if (m.refTarget) html += `<div class="ref-item"><div class="ref-dot" style="background:rgba(16,185,129,0.7)"></div>最佳目標：${m.refTarget} ${m.unit}（FH 高風險）</div>`;
+  if (m.refMin) html += `<div class="ref-item"><div class="ref-dot" style="background:rgba(251,191,36,0.7)"></div>下限：${m.refMin} ${m.unit}</div>`;
+  html += `<div class="ref-item"><div class="ref-dot" style="background:rgba(0,212,170,0.8)"></div>服藥後數據</div>`;
+  note.innerHTML = html;
+}
+
+// ============================================================
+// 更新資料表格
+// ============================================================
+function updateTable() {
+  const m = METRICS[currentMetric];
+  const data = [...m.data].reverse();
+  document.getElementById('th-metric').textContent = `${m.name} (${m.unit})`;
+
+  const tbody = document.getElementById('table-body');
+  tbody.innerHTML = data.map(d => {
+    const status = getStatus(currentMetric, d.value);
+    const age = calcAge(d.date);
+    const isMed = d.date >= MEDICATION_DATE;
+    return `
+      <tr>
+        <td style="color:var(--text-primary);font-weight:500">${formatDateLabel(d.date)}</td>
+        <td>${age} 歲</td>
+        <td class="${status === 'high' ? 'val-high' : status === 'border' ? 'val-border' : 'val-normal'}">${d.value}</td>
+        <td>${getStatusLabel(status)}</td>
+        <td>
+          ${isMed ? '<span class="event-tag">💊 服藥中</span>' : ''}
+          ${d.note ? `<span class="event-tag" style="background:rgba(139,92,246,0.15);color:#a78bfa;border-color:rgba(139,92,246,0.3)">${d.note}</span>` : ''}
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+// ============================================================
+// AI Modal
+// ============================================================
+function openAIModal() {
+  document.getElementById('ai-modal').classList.add('open');
+}
+
+function closeAIModal() {
+  document.getElementById('ai-modal').classList.remove('open');
+}
+
+document.getElementById('ai-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeAIModal();
+});
+
+// ============================================================
+// PDF 匯出
+// ============================================================
+function exportPDF() {
+  const btn = document.getElementById('btn-pdf');
+  const originalText = btn.innerHTML;
+  btn.innerHTML = '⏳ <span class="btn-text">產生中...</span>';
+  btn.disabled = true;
+
+  const m = METRICS[currentMetric];
+  const filtered = getFilteredData(currentMetric, currentRange);
+
+  // 建立臨時 PDF 容器
+  const pdfDiv = document.createElement('div');
+  pdfDiv.style.cssText = 'font-family: Arial, sans-serif; padding: 24px; background: white; color: #1a1a2e; max-width: 700px;';
+
+  const tableRows = [...filtered].reverse().map(d => {
+    const status = getStatus(currentMetric, d.value);
+    const statusLabel = status === 'high' ? '⚠ 偏高' : status === 'border' ? '⚡ 邊緣' : '✓ 正常';
+    const color = status === 'high' ? '#e11d48' : status === 'border' ? '#d97706' : '#059669';
+    return `
+      <tr style="border-bottom:1px solid #f0f0f0">
+        <td style="padding:6px 10px">${formatDateLabel(d.date)}</td>
+        <td style="padding:6px 10px">${calcAge(d.date)} 歲</td>
+        <td style="padding:6px 10px;font-weight:bold;color:${color}">${d.value} ${m.unit}</td>
+        <td style="padding:6px 10px;color:${color}">${statusLabel}</td>
+        <td style="padding:6px 10px;font-size:11px;color:#666">${d.date >= MEDICATION_DATE ? '服藥中' : ''}${d.note ? ' ' + d.note : ''}</td>
+      </tr>
+    `;
+  }).join('');
+
+  pdfDiv.innerHTML = `
+    <div style="border-bottom:3px solid #1a1a2e;padding-bottom:16px;margin-bottom:20px">
+      <h1 style="font-size:22px;margin:0;color:#1a1a2e">個人健康數據報告</h1>
+      <p style="margin:4px 0 0;color:#666;font-size:13px">女性，47歲（1979/10/03）· 遺傳性高膽固醇（FH）患者</p>
+      <p style="margin:4px 0 0;color:#666;font-size:12px">報告產生時間：${new Date().toLocaleDateString('zh-TW')}</p>
+    </div>
+    <h2 style="font-size:16px;margin:0 0 12px;color:#1a1a2e">${m.fullName} 歷史趨勢</h2>
+    <table style="width:100%;border-collapse:collapse;font-size:13px">
+      <thead>
+        <tr style="background:#f8fafc">
+          <th style="padding:8px 10px;text-align:left;border-bottom:2px solid #e2e8f0;font-size:11px">日期</th>
+          <th style="padding:8px 10px;text-align:left;border-bottom:2px solid #e2e8f0;font-size:11px">年齡</th>
+          <th style="padding:8px 10px;text-align:left;border-bottom:2px solid #e2e8f0;font-size:11px">${m.name} (${m.unit})</th>
+          <th style="padding:8px 10px;text-align:left;border-bottom:2px solid #e2e8f0;font-size:11px">狀態</th>
+          <th style="padding:8px 10px;text-align:left;border-bottom:2px solid #e2e8f0;font-size:11px">備註</th>
+        </tr>
+      </thead>
+      <tbody>${tableRows}</tbody>
+    </table>
+    ${m.refMax ? `<p style="margin:16px 0 0;font-size:12px;color:#666;border-top:1px solid #e2e8f0;padding-top:12px">參考範圍：${m.name} 目標值 ≤ ${m.refMax} ${m.unit}${m.refTarget ? `（FH 高風險患者建議 ≤ ${m.refTarget} ${m.unit}）` : ''}</p>` : ''}
+    <p style="margin:8px 0 0;font-size:11px;color:#999">此報告由個人健康數據儀表板自動產生，僅供參考，請遵醫囑。</p>
+  `;
+
+  document.body.appendChild(pdfDiv);
+
+  const opt = {
+    margin: [10, 10, 10, 10],
+    filename: `健康數據報告_${m.name}_${new Date().toISOString().slice(0,10)}.pdf`,
+    image: { type: 'jpeg', quality: 0.95 },
+    html2canvas: { scale: 2, useCORS: true },
+    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+  };
+
+  html2pdf().set(opt).from(pdfDiv).save().then(() => {
+    document.body.removeChild(pdfDiv);
+    btn.innerHTML = originalText;
+    btn.disabled = false;
+  });
+}
+
+// ============================================================
+// 初始化
+// ============================================================
+function init() {
+  buildCards();
+  updateChart();
+  updateTable();
+}
+
+init();
+</script>
+</body>
+</html>
