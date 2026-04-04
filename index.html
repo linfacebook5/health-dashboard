@@ -704,7 +704,7 @@
           <small>深度問答 · 文獻引用 · 連結 Google Sheets 分析數據</small>
         </div>
       </a>
-      <a class="modal-link-btn" href="https://aistudio.google.com" target="_blank" rel="noopener">
+      <a class="modal-link-btn" href="https://aistudio.google.com/app/prompts/new_chat" target="_blank" rel="noopener">
         <div class="modal-link-icon">🔍</div>
         <div class="modal-link-text">
           Google AI Studio
@@ -890,6 +890,26 @@ const METRICS = {
 };
 
 const MEDICATION_DATE = '2025-06';
+
+// Google Sheets 發佈 CSV 連結（表單回應自動寫入此試算表）
+const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSaALYP2Qxq4gUw11JAF6RS8G7rqtN9RA0HFXNmXBWo2OrkBldvexSE-J_hNbjKlnXji3h0Ia39eadn/pub?gid=599767718&single=true&output=csv';
+
+// CSV 欄位索引對應（依 Google 表單欄位順序）
+const COL = {
+  date: 1,        // 紀錄日期
+  sbp: 4,         // 收縮壓
+  dbp: 5,         // 舒張壓
+  hr: 6,          // 心跳
+  weight: 7,      // 體重
+  tc: 9,          // 總膽固醇 TC
+  ldl: 10,        // LDL
+  hdl: 11,        // HDL
+  tg: 12,         // TG
+  glucose: 13,    // 空腹血糖
+  hba1c: 14,      // HbA1c
+  medication: 15, // 用藥明細
+  note: 20        // 備註
+};
 
 // ============================================================
 // 狀態
@@ -1284,9 +1304,135 @@ function exportPDF() {
 }
 
 // ============================================================
-// 初始化
+// CSV 解析器（處理引號內的逗號）
 // ============================================================
-function init() {
+function parseCSV(text) {
+  const lines = text.trim().split('\n');
+  return lines.map(line => {
+    const result = [];
+    let current = '';
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"') {
+        inQuotes = !inQuotes;
+      } else if (ch === ',' && !inQuotes) {
+        result.push(current.trim());
+        current = '';
+      } else {
+        current += ch;
+      }
+    }
+    result.push(current.trim());
+    return result;
+  });
+}
+
+// ============================================================
+// 將表單日期轉為 YYYY-MM 格式
+// ============================================================
+function parseFormDate(dateStr) {
+  if (!dateStr) return null;
+  const cleaned = dateStr.replace(/"/g, '').trim();
+  let year, month;
+  if (/^\d{4}[\/-]\d{1,2}[\/-]\d{1,2}$/.test(cleaned)) {
+    // YYYY/MM/DD 或 YYYY-MM-DD
+    const parts = cleaned.split(/[\/-]/);
+    year = parts[0]; month = parts[1].padStart(2, '0');
+  } else if (/^\d{1,2}[\/-]\d{1,2}[\/-]\d{4}$/.test(cleaned)) {
+    // MM/DD/YYYY
+    const parts = cleaned.split(/[\/-]/);
+    year = parts[2]; month = parts[0].padStart(2, '0');
+  } else {
+    return null;
+  }
+  return `${year}-${month}`;
+}
+
+// ============================================================
+// 新增或更新指標資料點（同日期會覆蓋）
+// ============================================================
+function addOrUpdateDataPoint(metricKey, dateStr, value, note) {
+  const data = METRICS[metricKey].data;
+  const existing = data.find(d => d.date === dateStr);
+  if (existing) {
+    existing.value = value;
+    if (note) existing.note = note;
+  } else {
+    const entry = { date: dateStr, value };
+    if (note) entry.note = note;
+    data.push(entry);
+  }
+}
+
+// ============================================================
+// 從 Google Sheets 抓取並合併資料
+// ============================================================
+async function fetchSheetData() {
+  try {
+    const response = await fetch(SHEET_CSV_URL);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const csvText = await response.text();
+    const rows = parseCSV(csvText);
+
+    if (rows.length <= 1) {
+      console.log('📋 Google Sheets 目前無新資料，使用歷史數據');
+      return;
+    }
+
+    let importCount = 0;
+    for (let i = 1; i < rows.length; i++) {
+      const row = rows[i];
+      const dateStr = parseFormDate(row[COL.date]);
+      if (!dateStr) continue;
+
+      const noteText = [row[COL.medication], row[COL.note]]
+        .filter(Boolean).join('；') || undefined;
+
+      // 寫入各項指標
+      const pairs = [
+        ['ldl', COL.ldl], ['tc', COL.tc], ['hdl', COL.hdl],
+        ['tg', COL.tg], ['glucose', COL.glucose]
+      ];
+      pairs.forEach(([key, col]) => {
+        const val = parseFloat(row[col]);
+        if (!isNaN(val) && val > 0) {
+          addOrUpdateDataPoint(key, dateStr, val, noteText);
+          importCount++;
+        }
+      });
+
+      // 計算衍生指標：動脈硬化指數 (TC/HDL)
+      const tc = parseFloat(row[COL.tc]);
+      const hdl = parseFloat(row[COL.hdl]);
+      const tg = parseFloat(row[COL.tg]);
+      if (!isNaN(tc) && !isNaN(hdl) && hdl > 0) {
+        addOrUpdateDataPoint('ai', dateStr,
+          Math.round((tc / hdl) * 100) / 100, noteText);
+      }
+      // TG/HDL 胰島素阻抗指標
+      if (!isNaN(tg) && !isNaN(hdl) && hdl > 0) {
+        addOrUpdateDataPoint('tghdl', dateStr,
+          Math.round((tg / hdl) * 100) / 100, noteText);
+      }
+    }
+
+    // 所有指標按日期排序
+    Object.keys(METRICS).forEach(key => {
+      METRICS[key].data.sort((a, b) => a.date.localeCompare(b.date));
+    });
+
+    console.log(`✅ 已從 Google Sheets 匯入 ${importCount} 筆資料`);
+  } catch (err) {
+    console.warn('⚠️ 無法讀取 Google Sheets，使用歷史數據：', err.message);
+  }
+}
+
+// ============================================================
+// 初始化（先抓取 Google Sheets 再渲染）
+// ============================================================
+async function init() {
+  await fetchSheetData();
   buildCards();
   updateChart();
   updateTable();
